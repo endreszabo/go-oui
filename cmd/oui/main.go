@@ -24,5 +24,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(org)
+	fmt.Println(org.Name)
 }
