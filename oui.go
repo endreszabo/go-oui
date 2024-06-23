@@ -1,26 +1,17 @@
 package oui
 
 import (
+	"bytes"
+	_ "embed"
 	"encoding/csv"
 	"fmt"
 	"io"
-	"log"
-	"net/http"
-	"os"
-	"os/user"
 	"strings"
 	"unicode"
 )
 
-var ouiFilename = ".oui.csv"
-
-func init() {
-	usr, err := user.Current()
-	if err != nil {
-		log.Fatal(err)
-	}
-	ouiFilename = usr.HomeDir + "/" + ouiFilename
-}
+//go:embed oui.csv
+var ouiCSVData []byte
 
 type OUI struct {
 	lookups map[string]organization
@@ -69,21 +60,8 @@ func (o *OUI) Lookup(macAddress string) (org organization, err error) {
 }
 
 func (o *OUI) loadData() error {
-	log.Printf("loading OUI data: %s", ouiFilename)
-	ouiFile, err := os.Open(ouiFilename)
-	if err != nil {
-		if os.IsNotExist(err) {
-			o.download()
-			ouiFile, err = os.Open(ouiFilename)
-		}
-		if err != nil {
-			return fmt.Errorf("OUI Load|Open File: %s", err)
-		}
-	}
-	defer ouiFile.Close()
-
-	reader := csv.NewReader(ouiFile)
-
+	br := bytes.NewReader(ouiCSVData)
+	reader := csv.NewReader(br)
 	header, err := reader.Read()
 	if err != nil {
 		return fmt.Errorf("failed to read OUI header data: %s", err)
@@ -107,37 +85,4 @@ func (o *OUI) loadData() error {
 		}
 	}
 	return nil
-}
-
-func (o *OUI) download() {
-	fmt.Printf("opening oui file %s: ", ouiFilename)
-	ouiFile, err := os.OpenFile(ouiFilename, os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		log.Fatalf("failed to open file: %s", err)
-	}
-	defer ouiFile.Close()
-
-	const ouiURL = "http://standards-oui.ieee.org/oui/oui.csv"
-	fmt.Println("downloading oui data...")
-
-	res, err := http.Get(ouiURL)
-	if err != nil {
-		log.Fatalf("failed to download oui data: %s", err)
-	}
-	defer res.Body.Close()
-
-	var writtenBytes int64
-	totalBytes := res.ContentLength
-
-	for writtenBytes < totalBytes {
-		written, err := io.CopyN(ouiFile, res.Body, 1024)
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			log.Fatalf("failed to read oui download data: %s", err)
-		}
-		writtenBytes += written
-	}
-
-	fmt.Println("finished downloding oui data")
 }
