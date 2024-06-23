@@ -1,21 +1,19 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/dmowcomber/oui"
 )
 
 func main() {
-	var macAddr string
-	flag.StringVar(&macAddr, "m", "", "The Mac Address")
-	flag.Parse()
-	if macAddr == "" {
-		flag.Usage()
+	args := os.Args[1:]
+	if len(args) != 1 {
 		log.Fatal("must set a mac address")
 	}
+	macAddr := args[0]
 
 	o, err := oui.New()
 	if err != nil {
