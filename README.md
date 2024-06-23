@@ -1,5 +1,5 @@
-# OUI Lookup Tool
-The OUI Lookup tool is useful for mapping Mac Addresses to Organization names
+# OUI Lookup
+The OUI Lookup package and command line is useful for mapping Mac Addresses to Organization names
 
 ## Install
 ```
