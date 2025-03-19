@@ -1,27 +1,24 @@
 package oui
 
 import (
-	"bytes"
 	_ "embed"
 	"encoding/csv"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"unicode"
 )
 
-//go:embed oui.csv
-var ouiCSVData []byte
-
 type OUI struct {
-	lookups map[string]organization
+	OuiMap map[string]organization
 }
 
-func New() (*OUI, error) {
+func New(dbFile string, skipAddresses bool) (*OUI, error) {
 	o := &OUI{
-		lookups: make(map[string]organization),
+		OuiMap: make(map[string]organization),
 	}
-	err := o.loadData()
+	err := o.loadData(dbFile, skipAddresses)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +30,7 @@ type organization struct {
 	Address string
 }
 
-func (o *OUI) Lookup(macAddress string) (org organization, err error) {
+func (o *OUI) Lookup(macAddress string) (org organization, err error, found bool) {
 	var oui string
 
 	for _, macAddrRune := range strings.ToUpper(macAddress) {
@@ -50,8 +47,8 @@ func (o *OUI) Lookup(macAddress string) (org organization, err error) {
 		return
 	}
 
-	org, ok := o.lookups[oui]
-	if !ok {
+	org, found = o.OuiMap[oui]
+	if !found {
 		err = fmt.Errorf("OUI Query|Find Assignment: Assignment not found for %s", oui)
 		return
 	}
@@ -59,9 +56,14 @@ func (o *OUI) Lookup(macAddress string) (org organization, err error) {
 	return
 }
 
-func (o *OUI) loadData() error {
-	br := bytes.NewReader(ouiCSVData)
-	reader := csv.NewReader(br)
+func (o *OUI) loadData(dbFile string, skipAddresses bool) error {
+
+	file, err := os.Open(dbFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	reader := csv.NewReader(file)
 	header, err := reader.Read()
 	if err != nil {
 		return fmt.Errorf("failed to read OUI header data: %s", err)
@@ -79,9 +81,16 @@ func (o *OUI) loadData() error {
 		} else if err != nil {
 			return fmt.Errorf("failed to read OUI file: %s", err)
 		}
-		o.lookups[line[1]] = organization{
-			Name:    strings.TrimSpace(line[2]),
-			Address: strings.TrimSpace(line[3]),
+		if !skipAddresses {
+			o.OuiMap[line[1]] = organization{
+				Name:    strings.TrimSpace(line[2]),
+				Address: strings.TrimSpace(line[3]),
+			}
+		} else {
+			o.OuiMap[line[1]] = organization{
+				Name:    strings.TrimSpace(line[2]),
+				Address: "",
+			}
 		}
 	}
 	return nil
