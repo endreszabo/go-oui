@@ -5,22 +5,22 @@ import (
 	"log"
 	"os"
 
-	"github.com/dmowcomber/oui"
+	"github.com/endreszabo/go-oui"
 )
 
 func main() {
-	args := os.Args[1:]
-	if len(args) != 1 {
+	args := os.Args[2:]
+	if len(args) < 2 {
 		log.Fatal("must set a mac address")
 	}
 	macAddr := args[0]
 
-	o, err := oui.New()
+	o, err := oui.New(os.Args[1], true)
 	if err != nil {
 		log.Fatalf("failed to initialize OUI data: %s", err)
 	}
 
-	org, err := o.Lookup(macAddr)
+	org, err, _ := o.Lookup(macAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
